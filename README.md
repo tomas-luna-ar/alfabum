@@ -2,6 +2,8 @@
 
 Álbum de figuritas de alfajores: sacale una foto al paquete de cada alfajor que comés, puntualo de 1 a 5 y se pega en tu álbum como figurita.
 
+**App:** https://alfabum.vercel.app — cada push a `main` se deploya automáticamente en Vercel.
+
 ## Correr
 
 ```bash
