@@ -17,12 +17,12 @@ const PINCH = 0.06;
 /** Cantidad y profundidad de los dientes del corte en zigzag. */
 const TEETH = 12;
 const TOOTH_DEPTH = 0.016;
-/** Margen alrededor para la sombra. */
-const PAD = 60;
+/** Margen alrededor para la sombra proyectada en el fondo. */
+const PAD = 100;
 
 /**
  * Dibuja el recorte del paquete como un alfajor envuelto: cierres sellados con corte en zigzag,
- * volumen de "almohadita", brillo del plástico y sombra. Es solo presentación: lo guardado sigue siendo el recorte.
+ * volumen de "almohadita" y sombra sobre el fondo. Es solo presentación: lo guardado sigue siendo el recorte.
  */
 export function WrappedAlfajor({ blob, alt }: Props) {
   const id = useId().replace(/:/g, "");
@@ -91,21 +91,20 @@ export function WrappedAlfajor({ blob, alt }: Props) {
           <stop offset={1 - SEAL - 0.04} stopColor="#000" stopOpacity="0" />
           <stop offset="1" stopColor="#000" stopOpacity="0.25" />
         </linearGradient>
-        {/* Reflejo del plástico */}
-        <linearGradient id={`${id}-gloss`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0.18" stopColor="#fff" stopOpacity="0" />
-          <stop offset="0.3" stopColor="#fff" stopOpacity="0.45" />
-          <stop offset="0.36" stopColor="#fff" stopOpacity="0.08" />
-          <stop offset="0.62" stopColor="#fff" stopOpacity="0" />
-          <stop offset="0.7" stopColor="#fff" stopOpacity="0.18" />
-          <stop offset="0.74" stopColor="#fff" stopOpacity="0" />
-        </linearGradient>
-        <filter id={`${id}-shadow`} x="-10%" y="-10%" width="120%" height="140%">
-          <feDropShadow dx="0" dy={H * 0.03} stdDeviation={H * 0.025} floodColor="#3c1e0a" floodOpacity="0.35" />
+        {/* Sombra proyectada sobre el fondo, como si el paquete estuviera apoyado y un poco levantado */}
+        <filter id={`${id}-cast`} x="-20%" y="-20%" width="140%" height="160%">
+          <feGaussianBlur stdDeviation={Math.min(W, H) * 0.045} />
+        </filter>
+        <filter id={`${id}-contact`} x="-10%" y="-10%" width="120%" height="140%">
+          <feDropShadow dx="0" dy={H * 0.015} stdDeviation={H * 0.012} floodColor="#2b1406" floodOpacity="0.35" />
         </filter>
       </defs>
 
-      <g filter={`url(#${id}-shadow)`}>
+      <g transform={`translate(${W * 0.03} ${H * 0.09})`} opacity="0.45" filter={`url(#${id}-cast)`}>
+        <path d={outline} transform={transpose} fill="#2b1406" />
+      </g>
+
+      <g filter={`url(#${id}-contact)`}>
         <g clipPath={`url(#${id}-clip)`}>
           <image href={image.url} x="0" y="0" width={width} height={height} preserveAspectRatio="none" />
           <g transform={transpose}>
@@ -141,7 +140,6 @@ export function WrappedAlfajor({ blob, alt }: Props) {
               <path d={`M${W - seal} ${H * 0.72} q${-W * 0.04} ${-H * 0.01} ${-W * 0.09} ${-H * 0.07}`} />
             </g>
 
-            <rect width={W} height={H} fill={`url(#${id}-gloss)`} style={{ mixBlendMode: "screen" }} />
           </g>
         </g>
         <path d={outline} transform={transpose} fill="none" stroke="#000" strokeOpacity="0.18" strokeWidth="3" />
