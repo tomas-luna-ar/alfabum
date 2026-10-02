@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AlbumBook } from "@/components/AlbumBook";
 import { FlipSticker } from "@/components/FlipSticker";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import { EmptySlot } from "@/components/Sticker";
 import { useAlfajores, useUser } from "@/lib/hooks";
 import { getShareCode } from "@/lib/repository";
@@ -94,7 +95,11 @@ export default function AlbumPage() {
     <main className="mx-auto max-w-3xl overflow-x-clip px-4 pb-28 pt-[max(1.5rem,env(safe-area-inset-top))]">
       <header className="mb-5 flex items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-4xl text-amber-900">Alfabum</h1>
+          <h1 className="font-display flex items-center gap-2 text-4xl text-amber-900">
+            {/* eslint-disable-next-line @next/next/no-img-element -- logo SVG local */}
+            <img src="/icon.svg" alt="" className="-ml-1 h-11 w-11" />
+            Alfabum
+          </h1>
           <p className="text-sm text-amber-900/70">Mi álbum de alfajores</p>
         </div>
         <div className="flex gap-2">
@@ -108,6 +113,8 @@ export default function AlbumPage() {
           </Link>
         </div>
       </header>
+
+      <InstallPrompt />
 
       {alfajores && alfajores.length > 0 && (
         <section className="mb-5 grid grid-cols-3 gap-2 text-center">

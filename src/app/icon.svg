@@ -1,10 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Logo de Alfabum: envoltorio de alfajor con cierres en zigzag y la "A" en la etiqueta -->
   <rect width="512" height="512" rx="112" fill="#fbf3e4"/>
-  <ellipse cx="256" cy="330" rx="170" ry="60" fill="#5a3214"/>
-  <rect x="86" y="250" width="340" height="80" fill="#5a3214"/>
-  <rect x="96" y="238" width="320" height="40" rx="20" fill="#e8b46a"/>
-  <ellipse cx="256" cy="200" rx="170" ry="60" fill="#7c4a1e"/>
-  <rect x="86" y="200" width="340" height="50" fill="#7c4a1e"/>
-  <ellipse cx="256" cy="250" rx="170" ry="0.1" fill="#7c4a1e"/>
-  <ellipse cx="256" cy="196" rx="150" ry="46" fill="#8f5726"/>
+  <g transform="rotate(-8 256 256)">
+    <path d="M72 150H440L452 163.25L440 176.5L452 189.75L440 203L452 216.25L440 229.5L452 242.75L440 256L452 269.25L440 282.5L452 295.75L440 309L452 322.25L440 335.5L452 348.75L440 362H72L60 348.75L72 335.5L60 322.25L72 309L60 295.75L72 282.5L60 269.25L72 256L60 242.75L72 229.5L60 216.25L72 203L60 189.75L72 176.5L60 163.25L72 150Z" fill="#000" opacity="0.12" transform="translate(6 12)"/>
+    <path d="M72 150H440L452 163.25L440 176.5L452 189.75L440 203L452 216.25L440 229.5L452 242.75L440 256L452 269.25L440 282.5L452 295.75L440 309L452 322.25L440 335.5L452 348.75L440 362H72L60 348.75L72 335.5L60 322.25L72 309L60 295.75L72 282.5L60 269.25L72 256L60 242.75L72 229.5L60 216.25L72 203L60 189.75L72 176.5L60 163.25L72 150Z" fill="#c0392b"/>
+    <rect x="60" y="150" width="56" height="212" fill="#000" opacity="0.12"/>
+    <rect x="396" y="150" width="56" height="212" fill="#000" opacity="0.12"/>
+    <ellipse cx="256" cy="256" rx="104" ry="78" fill="#fbf3e4"/>
+    <path d="M202 310L241 206H271L310 310H279L272 289H240L233 310ZM239 270H273L256 222Z" fill="#78350f" fill-rule="evenodd" stroke="#78350f" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M128 176L384 176L360 196L150 196Z" fill="#fff" opacity="0.25"/>
+  </g>
 </svg>

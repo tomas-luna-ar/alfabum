@@ -54,7 +54,11 @@ export default function SharedAlbumPage() {
   return (
     <main className="mx-auto max-w-3xl overflow-x-clip px-4 pb-28 pt-[max(1.5rem,env(safe-area-inset-top))]">
       <header className="mb-5">
-        <h1 className="font-display text-4xl text-amber-900">Alfabum</h1>
+        <h1 className="font-display flex items-center gap-2 text-4xl text-amber-900">
+          {/* eslint-disable-next-line @next/next/no-img-element -- logo SVG local */}
+          <img src="/icon.svg" alt="" className="-ml-1 h-11 w-11" />
+          Alfabum
+        </h1>
         <p className="text-sm text-amber-900/70">Un álbum de alfajores compartido con vos</p>
       </header>
 
