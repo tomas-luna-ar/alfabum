@@ -139,6 +139,10 @@ function StickerBack({ alfajor, href, focusable }: Props & { focusable: boolean 
           </span>
         </div>
 
+        {alfajor.photoCredit && (
+          <p className="mt-[3%] truncate text-[0.5rem] text-white/70">{alfajor.photoCredit}</p>
+        )}
+
         {href && (
           <Link
             href={href}

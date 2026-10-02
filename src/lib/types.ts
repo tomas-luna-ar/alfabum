@@ -13,12 +13,14 @@ export type Alfajor = {
   thumbUrl: string;
   /** "scan": paquete recortado y enderezado. "photo": foto original. */
   photoStyle: PhotoStyle;
+  /** Fuente de la foto cuando no la sacó el usuario (ej: "Foto: Open Food Facts"), para citarla. */
+  photoCredit: string | null;
   createdAt: number;
 };
 
 export type PhotoStyle = "scan" | "photo";
 
-export type NewAlfajor = Pick<Alfajor, "name" | "brand" | "rating" | "notes" | "photoStyle"> & {
+export type NewAlfajor = Pick<Alfajor, "name" | "brand" | "rating" | "notes" | "photoStyle" | "photoCredit"> & {
   /** Imagen procesada; al guardarla se sube junto con su miniatura. */
   photo: Blob;
 };
@@ -33,3 +35,11 @@ export interface AlfajorRepository {
   update(id: string, data: AlfajorUpdate): Promise<Alfajor>;
   remove(id: string): Promise<void>;
 }
+
+/** Alfajor conocido del catálogo (sale de Open Food Facts), para no tener que sacarle foto. */
+export type CatalogItem = {
+  code: string;
+  brand: string;
+  name: string;
+  imageUrl: string;
+};

@@ -4,13 +4,17 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AlfajorFields, type AlfajorFormValues } from "@/components/AlfajorForm";
+import { CatalogSearch } from "@/components/CatalogSearch";
 import { CornerEditor } from "@/components/CornerEditor";
 import { Sticker } from "@/components/Sticker";
 import { useAlfajores } from "@/lib/hooks";
 import { rotateClockwise, type Quad } from "@/lib/geometry";
 import { preloadModel, processPhoto, scanWithCorners, type ProcessedPhoto, type ProcessStage } from "@/lib/image";
 import { repository } from "@/lib/repository";
-import type { PhotoStyle } from "@/lib/types";
+import type { CatalogItem, PhotoStyle } from "@/lib/types";
+
+/** Crédito obligatorio de las fotos del catálogo (licencia CC BY-SA). */
+const CATALOG_CREDIT = "Foto: Open Food Facts (CC BY-SA)";
 
 function stageLabel(stage: ProcessStage) {
   if (stage.kind === "cutting") return "Enderezando el paquete…";
@@ -28,6 +32,7 @@ export default function NuevoPage() {
   const [processed, setProcessed] = useState<ProcessedPhoto | null>(null);
   const [editingCorners, setEditingCorners] = useState(false);
   const [style, setStyle] = useState<PhotoStyle>("scan");
+  const [photoCredit, setPhotoCredit] = useState<string | null>(null);
   const [values, setValues] = useState<AlfajorFormValues>({ name: "", brand: "", rating: 0, notes: "" });
   const [stage, setStage] = useState<ProcessStage | null>(null);
   const [saving, setSaving] = useState(false);
@@ -47,13 +52,34 @@ export default function NuevoPage() {
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (!file) return;
+    if (file) await loadPhoto(file, null);
+  }
+
+  /** Elegir del catálogo completa marca y descripción, y usa su foto como si la hubieran sacado. */
+  async function pickFromCatalog(item: CatalogItem) {
+    setValues((v) => ({ ...v, brand: item.brand, name: item.name }));
+    setError(null);
+    setStage({ kind: "preparing" });
+    try {
+      const res = await fetch(item.imageUrl, { mode: "cors" });
+      if (!res.ok) throw new Error(`Foto del catálogo: ${res.status}`);
+      const file = new File([await res.blob()], `${item.code}.jpg`, { type: "image/jpeg" });
+      await loadPhoto(file, CATALOG_CREDIT);
+    } catch (err) {
+      console.error(err);
+      setStage(null);
+      setError("No pudimos bajar la foto de ese alfajor. Probá sacándole una foto.");
+    }
+  }
+
+  async function loadPhoto(file: File, credit: string | null) {
     setError(null);
     setStage({ kind: "preparing" });
     try {
       const result = await processPhoto(file, setStage);
       setSource(file);
       setProcessed(result);
+      setPhotoCredit(credit);
       setStyle("scan");
       if (!result.scan) {
         setError("No pudimos encontrar el paquete en esta foto. Podés marcarlo con “Ajustar esquinas” o usar la original.");
@@ -93,6 +119,7 @@ export default function NuevoPage() {
         notes: values.notes.trim(),
         photo,
         photoStyle,
+        photoCredit,
       });
       router.push("/");
     } catch (err) {
@@ -112,6 +139,8 @@ export default function NuevoPage() {
       </header>
 
       <input ref={fileInput} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
+
+      <CatalogSearch onPick={pickFromCatalog} onTakePhoto={() => fileInput.current?.click()} disabled={processing} />
 
       <div className="relative mx-auto mb-2 w-2/3">
         <button type="button" onClick={() => fileInput.current?.click()} className="block w-full" disabled={processing}>

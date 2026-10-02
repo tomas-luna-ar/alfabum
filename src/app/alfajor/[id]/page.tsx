@@ -101,6 +101,14 @@ export default function AlfajorPage() {
             <p className="mt-3 text-xs text-stone-400">
               Pegada el {new Date(alfajor.createdAt).toLocaleDateString("es-AR", { dateStyle: "long" })}
             </p>
+            {alfajor.photoCredit && (
+              <p className="mt-1 text-xs text-stone-400">
+                {alfajor.photoCredit} ·{" "}
+                <a href="https://world.openfoodfacts.org" target="_blank" rel="noreferrer" className="underline">
+                  openfoodfacts.org
+                </a>
+              </p>
+            )}
           </section>
 
           <button

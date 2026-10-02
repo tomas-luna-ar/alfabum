@@ -1,6 +1,6 @@
 import { toThumbnail } from "./image";
 import { ensureSession, publicUrl, STICKERS_BUCKET, supabase } from "./supabase";
-import type { Alfajor, AlfajorRepository, AlfajorUpdate, NewAlfajor } from "./types";
+import type { Alfajor, AlfajorRepository, AlfajorUpdate, CatalogItem, NewAlfajor } from "./types";
 
 type AlfajorRow = {
   id: string;
@@ -12,6 +12,7 @@ type AlfajorRow = {
   photo_path: string;
   thumb_path: string;
   photo_style: Alfajor["photoStyle"];
+  photo_credit: string | null;
   created_at: string;
 };
 
@@ -25,7 +26,7 @@ function newId() {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-const COLUMNS = "id, number, name, brand, rating, notes, photo_path, thumb_path, photo_style, created_at";
+const COLUMNS = "id, number, name, brand, rating, notes, photo_path, thumb_path, photo_style, photo_credit, created_at";
 
 function fromRow(row: AlfajorRow): Alfajor {
   return {
@@ -38,6 +39,7 @@ function fromRow(row: AlfajorRow): Alfajor {
     photoUrl: publicUrl(row.photo_path),
     thumbUrl: publicUrl(row.thumb_path),
     photoStyle: row.photo_style,
+    photoCredit: row.photo_credit,
     createdAt: Date.parse(row.created_at),
   };
 }
@@ -58,7 +60,7 @@ export const repository: AlfajorRepository = {
     return data ? fromRow(data) : undefined;
   },
 
-  async create({ photo, photoStyle, ...fields }: NewAlfajor) {
+  async create({ photo, photoStyle, photoCredit, ...fields }: NewAlfajor) {
     const session = await ensureSession();
     const id = newId();
     // Cada usuario sube a su propia carpeta: así lo exigen las políticas de Storage
@@ -79,7 +81,15 @@ export const repository: AlfajorRepository = {
     const { data, error } = await supabase
       .from("alfajores")
       // El número lo asigna la base (trigger), así que acá va cualquier valor
-      .insert({ id, ...fields, number: 0, photo_path: photoPath, thumb_path: thumbPath, photo_style: photoStyle })
+      .insert({
+        id,
+        ...fields,
+        number: 0,
+        photo_path: photoPath,
+        thumb_path: thumbPath,
+        photo_style: photoStyle,
+        photo_credit: photoCredit,
+      })
       .select(COLUMNS)
       .single();
     if (error) {
@@ -126,4 +136,11 @@ export async function getSharedAlbum(code: string): Promise<Alfajor[]> {
   const { data, error } = await supabase.rpc("shared_album", { code });
   if (error) throw error;
   return (data as AlfajorRow[]).map(fromRow);
+}
+
+/** Catálogo completo de alfajores conocidos (son unos 200: se busca en el navegador). */
+export async function getCatalog(): Promise<CatalogItem[]> {
+  const { data, error } = await supabase.from("catalog").select("code, brand, name, image_url").order("brand");
+  if (error) throw error;
+  return data.map((row) => ({ code: row.code, brand: row.brand, name: row.name, imageUrl: row.image_url }));
 }
