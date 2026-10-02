@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-display: var(--font-lilita);
+}
+
+body {
+  /* Papel del álbum: crema con puntitos suaves */
+  background-color: #fbf3e4;
+  background-image: radial-gradient(rgba(124, 74, 30, 0.08) 1px, transparent 1px);
+  background-size: 18px 18px;
+  color: #2b1a0e;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Figurita dorada (5 estrellas): borde dorado + brillo holográfico */
+.sticker-golden {
+  background: linear-gradient(135deg, #f7d774, #fff4c2 40%, #e0b23c 60%, #fbe7a1);
+}
+
+.sticker-shine {
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.45) 45%,
+    rgba(255, 255, 255, 0) 55%
+  );
+  background-size: 250% 100%;
+  animation: shine 3.5s ease-in-out infinite;
+  mix-blend-mode: overlay;
+}
+
+@keyframes shine {
+  0% {
+    background-position: 120% 0;
+  }
+  60%,
+  100% {
+    background-position: -120% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sticker-shine {
+    animation: none;
+  }
+}
+
+/* Al aparecer una figurita nueva, se "pega" en el álbum */
+.sticker-pop {
+  animation: pop 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.6) rotate(-6deg);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
