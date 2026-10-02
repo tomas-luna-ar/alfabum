@@ -62,3 +62,31 @@ body {
     opacity: 1;
   }
 }
+
+/* Hojas del álbum: cartón crema con la sombra del lomo a la izquierda */
+.album-sheet {
+  height: 100%;
+  background-color: #fffaf0;
+  background-image:
+    linear-gradient(90deg, rgba(90, 50, 20, 0.18), rgba(90, 50, 20, 0.04) 4%, transparent 9%),
+    radial-gradient(rgba(124, 74, 30, 0.06) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    14px 14px;
+  box-shadow:
+    0 1px 0 rgba(124, 74, 30, 0.12),
+    0 8px 24px rgba(60, 30, 10, 0.16);
+}
+
+/* Dorso de la hoja mientras se da vuelta */
+.album-sheet-back {
+  background: linear-gradient(270deg, rgba(90, 50, 20, 0.16), transparent 10%), #f7eedb;
+  box-shadow: 0 8px 24px rgba(60, 30, 10, 0.16);
+}
+
+/* Canto de las hojas que quedan por delante: más grueso cuantas más hojas faltan */
+.album-page-stack {
+  box-shadow:
+    calc(var(--stack) * 1.5px) calc(var(--stack) * 1px) 0 #efe2c8,
+    calc(var(--stack) * 1.5px) calc(var(--stack) * 1px) 0 1px rgba(124, 74, 30, 0.15);
+}

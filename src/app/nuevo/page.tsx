@@ -2,38 +2,82 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlfajorFields, type AlfajorFormValues } from "@/components/AlfajorForm";
+import { CornerEditor } from "@/components/CornerEditor";
 import { Sticker } from "@/components/Sticker";
 import { useAlfajores } from "@/lib/hooks";
-import { toStickerPhoto } from "@/lib/image";
+import { rotateClockwise, type Quad } from "@/lib/geometry";
+import { preloadModel, processPhoto, scanWithCorners, type ProcessedPhoto, type ProcessStage } from "@/lib/image";
 import { repository } from "@/lib/repository";
+import type { PhotoStyle } from "@/lib/types";
+
+function stageLabel(stage: ProcessStage) {
+  if (stage.kind === "cutting") return "Enderezando el paquete…";
+  // Al 100% el modelo ya bajó pero todavía se está inicializando: no mostramos un porcentaje "trabado"
+  return stage.percent === undefined || stage.percent >= 100
+    ? "Preparando recortador…"
+    : `Preparando recortador… ${stage.percent}%`;
+}
 
 export default function NuevoPage() {
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
   const { alfajores } = useAlfajores();
-  const [photo, setPhoto] = useState<Blob | null>(null);
+  const [source, setSource] = useState<File | null>(null);
+  const [processed, setProcessed] = useState<ProcessedPhoto | null>(null);
+  const [editingCorners, setEditingCorners] = useState(false);
+  const [style, setStyle] = useState<PhotoStyle>("scan");
   const [values, setValues] = useState<AlfajorFormValues>({ name: "", brand: "", rating: 0, notes: "" });
-  const [processing, setProcessing] = useState(false);
+  const [stage, setStage] = useState<ProcessStage | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Empezamos a descargar el modelo apenas se abre la pantalla, así está listo para cuando saquen la foto
+  useEffect(() => {
+    preloadModel().catch(() => {});
+  }, []);
+
   const brands = [...new Set(alfajores?.map((a) => a.brand) ?? [])].sort();
-  const canSave = photo && values.name.trim() && values.brand.trim() && values.rating > 0 && !saving;
+  const processing = stage !== null;
+  const photoStyle: PhotoStyle = processed?.scan ? style : "photo";
+  const photo = processed ? (photoStyle === "scan" ? processed.scan : processed.photo) : null;
+  const canSave = photo && !processing && values.name.trim() && values.brand.trim() && values.rating > 0 && !saving;
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
     setError(null);
-    setProcessing(true);
+    setStage({ kind: "preparing" });
     try {
-      setPhoto(await toStickerPhoto(file));
+      const result = await processPhoto(file, setStage);
+      setSource(file);
+      setProcessed(result);
+      setStyle("scan");
+      if (!result.scan) {
+        setError("No pudimos encontrar el paquete en esta foto. Podés marcarlo con “Ajustar esquinas” o usar la original.");
+      }
     } catch {
       setError("No pudimos leer esa imagen. Probá con otra foto.");
     } finally {
-      setProcessing(false);
+      setStage(null);
+    }
+  }
+
+  async function applyCorners(corners: Quad) {
+    if (!source || !processed) return;
+    setEditingCorners(false);
+    setStage({ kind: "cutting" });
+    try {
+      const scan = await scanWithCorners(source, corners);
+      setProcessed({ ...processed, scan, corners });
+      setStyle("scan");
+      setError(null);
+    } catch {
+      setError("No pudimos recortar con esas esquinas. Probá de nuevo.");
+    } finally {
+      setStage(null);
     }
   }
 
@@ -48,9 +92,11 @@ export default function NuevoPage() {
         rating: values.rating,
         notes: values.notes.trim(),
         photo,
+        photoStyle,
       });
       router.push("/");
-    } catch {
+    } catch (err) {
+      console.error("No se pudo guardar la figurita", err);
       setError("No se pudo guardar la figurita. Intentá de nuevo.");
       setSaving(false);
     }
@@ -67,27 +113,83 @@ export default function NuevoPage() {
 
       <input ref={fileInput} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
 
-      <div className="mx-auto mb-2 w-2/3">
+      <div className="relative mx-auto mb-2 w-2/3">
         <button type="button" onClick={() => fileInput.current?.click()} className="block w-full" disabled={processing}>
           <Sticker
             name={values.name}
             brand={values.brand}
             rating={values.rating}
             photo={photo}
+            photoStyle={photoStyle}
             size="lg"
           />
         </button>
+        {stage && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl bg-amber-950/60 px-6 text-center text-white">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-white/30 border-t-white" />
+            <p className="text-sm font-medium">{stageLabel(stage)}</p>
+            {stage.kind === "preparing" && (
+              <p className="text-xs text-white/70">La primera vez descarga ~40MB; después queda guardado.</p>
+            )}
+          </div>
+        )}
       </div>
-      <div className="mb-6 text-center">
+      {processed?.scan && !processing && (
+        <div className="mx-auto mb-3 flex w-fit rounded-full bg-amber-900/10 p-1 text-sm" role="radiogroup" aria-label="Estilo de imagen">
+          {(["scan", "photo"] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              role="radio"
+              aria-checked={style === s}
+              onClick={() => setStyle(s)}
+              className={`rounded-full px-4 py-1.5 font-medium transition-colors ${
+                style === s ? "bg-amber-900 text-amber-50" : "text-amber-900"
+              }`}
+            >
+              {s === "scan" ? "Envuelto" : "Foto original"}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="mb-6 flex justify-center gap-5">
         <button
           type="button"
           onClick={() => fileInput.current?.click()}
           disabled={processing}
           className="text-sm font-medium text-amber-800 underline underline-offset-4"
         >
-          {processing ? "Procesando foto…" : photo ? "Cambiar foto" : "Sacar foto del paquete"}
+          {processing ? "Procesando foto…" : processed ? "Cambiar foto" : "Sacar foto del paquete"}
         </button>
+        {processed && !processing && (
+          <button
+            type="button"
+            onClick={() => setEditingCorners(true)}
+            className="text-sm font-medium text-amber-800 underline underline-offset-4"
+          >
+            Ajustar esquinas
+          </button>
+        )}
+        {processed?.corners && photoStyle === "scan" && !processing && (
+          <button
+            type="button"
+            onClick={() => applyCorners(rotateClockwise(processed.corners!))}
+            className="text-sm font-medium text-amber-800 underline underline-offset-4"
+            aria-label="Girar 90 grados"
+          >
+            ↻ Girar
+          </button>
+        )}
       </div>
+
+      {editingCorners && source && (
+        <CornerEditor
+          file={source}
+          initial={processed?.corners ?? null}
+          onCancel={() => setEditingCorners(false)}
+          onConfirm={applyCorners}
+        />
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <AlfajorFields values={values} onChange={setValues} brandSuggestions={brands} />
@@ -101,7 +203,7 @@ export default function NuevoPage() {
         >
           {saving ? "Pegando…" : "Pegar en el álbum"}
         </button>
-        {!photo && <p className="-mt-3 text-center text-xs text-amber-900/60">Necesitás una foto para crear la figurita.</p>}
+        {!processed && !processing && <p className="-mt-3 text-center text-xs text-amber-900/60">Necesitás una foto para crear la figurita.</p>}
       </form>
     </main>
   );

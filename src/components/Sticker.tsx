@@ -1,14 +1,20 @@
 "use client";
 
+import type { PhotoStyle } from "@/lib/types";
+import { useImageBlob } from "@/lib/useImageBlob";
 import { BlobImage } from "./BlobImage";
 import { StarRating } from "./StarRating";
+import { WrappedAlfajor } from "./WrappedAlfajor";
 
 type Props = {
   number?: number;
   name: string;
   brand: string;
   rating: number;
-  photo: Blob | null;
+  /** Foto recién sacada (Blob) o URL de una figurita guardada. */
+  photo: Blob | string | null;
+  /** "scan" se muestra como alfajor envuelto; "photo" (o ausente) como foto. */
+  photoStyle?: PhotoStyle;
   size?: "sm" | "lg";
 };
 
@@ -31,8 +37,9 @@ function frameColor(brand: string) {
   return FRAME_COLORS[hash % FRAME_COLORS.length];
 }
 
-export function Sticker({ number, name, brand, rating, photo, size = "sm" }: Props) {
+export function Sticker({ number, name, brand, rating, photo, photoStyle, size = "sm" }: Props) {
   const color = frameColor(brand || "?");
+  const blob = useImageBlob(photo);
   const isGolden = rating === 5;
   const large = size === "lg";
 
@@ -55,13 +62,23 @@ export function Sticker({ number, name, brand, rating, photo, size = "sm" }: Pro
           )}
         </div>
 
-        <div className="relative mx-[5%] flex-1 overflow-hidden rounded-md bg-black/20">
-          {photo ? (
-            <BlobImage blob={photo} alt={name} className="absolute inset-0 h-full w-full object-cover" draggable={false} />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-4xl text-white/60">📷</div>
-          )}
-        </div>
+        {blob && photoStyle === "scan" ? (
+          <div className="relative mx-[2%] flex-1">
+            <div className="absolute inset-0 -rotate-6">
+              <WrappedAlfajor blob={blob} alt={name} />
+            </div>
+          </div>
+        ) : (
+          <div className="relative mx-[5%] flex-1 overflow-hidden rounded-md bg-black/20">
+            {blob ? (
+              <BlobImage blob={blob} alt={name} className="absolute inset-0 h-full w-full object-cover" draggable={false} />
+            ) : photo ? (
+              <div className="absolute inset-0 animate-pulse bg-white/10" />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-4xl text-white/60">📷</div>
+            )}
+          </div>
+        )}
 
         <div className={`mx-[5%] my-[4%] rounded-md bg-white ${large ? "px-4 py-3" : "px-2 py-1.5"} text-center`}>
           <p className={`font-display ${large ? "text-2xl" : "text-sm"} truncate leading-tight text-stone-900`}>

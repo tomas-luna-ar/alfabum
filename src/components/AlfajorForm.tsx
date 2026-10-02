@@ -25,19 +25,7 @@ export function AlfajorFields({ values, onChange, brandSuggestions = [] }: Props
   return (
     <div className="space-y-4">
       <label className="block">
-        <span className="mb-1 block text-sm font-medium text-amber-900">Nombre</span>
-        <input
-          className={inputClass}
-          value={values.name}
-          onChange={(e) => set("name", e.target.value)}
-          placeholder="Ej: Triple chocolate"
-          required
-          maxLength={40}
-        />
-      </label>
-
-      <label className="block">
-        <span className="mb-1 block text-sm font-medium text-amber-900">Marca</span>
+        <span className="mb-1 block text-sm font-medium text-amber-900">Nombre/Marca</span>
         <input
           className={inputClass}
           value={values.brand}
@@ -52,6 +40,18 @@ export function AlfajorFields({ values, onChange, brandSuggestions = [] }: Props
             <option key={b} value={b} />
           ))}
         </datalist>
+      </label>
+
+      <label className="block">
+        <span className="mb-1 block text-sm font-medium text-amber-900">Descripción</span>
+        <input
+          className={inputClass}
+          value={values.name}
+          onChange={(e) => set("name", e.target.value)}
+          placeholder="Ej: Triple chocolate"
+          required
+          maxLength={40}
+        />
       </label>
 
       <div>

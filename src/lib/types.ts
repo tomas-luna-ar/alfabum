@@ -7,19 +7,25 @@ export type Alfajor = {
   /** Puntaje de 1 a 5. */
   rating: number;
   notes: string;
-  /** Foto ya recortada y redimensionada al formato figurita. */
-  photo: Blob;
+  /** URL pública de la imagen ya procesada al formato figurita. */
+  photoUrl: string;
+  /** URL de una versión chica, para la grilla del álbum. */
+  thumbUrl: string;
+  /** "scan": paquete recortado y enderezado. "photo": foto original. */
+  photoStyle: PhotoStyle;
   createdAt: number;
 };
 
-export type NewAlfajor = Pick<Alfajor, "name" | "brand" | "rating" | "notes" | "photo">;
+export type PhotoStyle = "scan" | "photo";
+
+export type NewAlfajor = Pick<Alfajor, "name" | "brand" | "rating" | "notes" | "photoStyle"> & {
+  /** Imagen procesada; al guardarla se sube junto con su miniatura. */
+  photo: Blob;
+};
 
 export type AlfajorUpdate = Partial<Pick<Alfajor, "name" | "brand" | "rating" | "notes">>;
 
-/**
- * Contrato de almacenamiento. Hoy hay una implementación local (IndexedDB);
- * para el álbum global se puede agregar una implementación remota con la misma interfaz.
- */
+/** Contrato de almacenamiento: las figuritas del usuario actual (ver repository.ts). */
 export interface AlfajorRepository {
   list(): Promise<Alfajor[]>;
   get(id: string): Promise<Alfajor | undefined>;

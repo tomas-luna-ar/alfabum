@@ -65,7 +65,8 @@ export default function AlfajorPage() {
           name={shown.name}
           brand={shown.brand}
           rating={shown.rating}
-          photo={alfajor.photo}
+          photo={alfajor.photoUrl}
+          photoStyle={alfajor.photoStyle}
           size="lg"
         />
       </div>
