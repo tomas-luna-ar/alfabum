@@ -30,7 +30,7 @@ const FRAME_COLORS = [
   "#7c4a1e", // chocolate
 ];
 
-function frameColor(brand: string) {
+export function frameColor(brand: string) {
   const key = brand.trim().toLowerCase();
   let hash = 0;
   for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AlbumBook } from "@/components/AlbumBook";
-import { EmptySlot, Sticker } from "@/components/Sticker";
+import { FlipSticker } from "@/components/FlipSticker";
+import { EmptySlot } from "@/components/Sticker";
 import { useAlfajores, useUser } from "@/lib/hooks";
 import { getShareCode } from "@/lib/repository";
 import type { Alfajor } from "@/lib/types";
@@ -226,16 +227,5 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 function AlbumSticker({ alfajor }: { alfajor: Alfajor }) {
-  return (
-    <Link href={`/alfajor/${alfajor.id}`} className="block transition-transform active:scale-95">
-      <Sticker
-        number={alfajor.number}
-        name={alfajor.name}
-        brand={alfajor.brand}
-        rating={alfajor.rating}
-        photo={alfajor.thumbUrl}
-        photoStyle={alfajor.photoStyle}
-      />
-    </Link>
-  );
+  return <FlipSticker alfajor={alfajor} href={`/alfajor/${alfajor.id}`} />;
 }

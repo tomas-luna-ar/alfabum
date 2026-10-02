@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AlbumBook } from "@/components/AlbumBook";
-import { Sticker } from "@/components/Sticker";
+import { FlipSticker } from "@/components/FlipSticker";
+import { EmptySlot } from "@/components/Sticker";
 import { getSharedAlbum } from "@/lib/repository";
 import type { Alfajor } from "@/lib/types";
 
@@ -42,14 +43,7 @@ export default function SharedAlbumPage() {
           // Los lugares sin figurita solo ocupan espacio, para que todas las hojas midan lo mismo
           return (
             <li key={alfajor?.id ?? `empty-${i}`} className={alfajor ? "" : "invisible"} aria-hidden={!alfajor}>
-              <Sticker
-                number={alfajor?.number}
-                name={alfajor?.name ?? ""}
-                brand={alfajor?.brand ?? ""}
-                rating={alfajor?.rating ?? 0}
-                photo={alfajor?.thumbUrl ?? null}
-                photoStyle={alfajor?.photoStyle}
-              />
+              {alfajor ? <FlipSticker alfajor={alfajor} /> : <EmptySlot number={0} />}
             </li>
           );
         })}
