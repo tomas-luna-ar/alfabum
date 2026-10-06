@@ -94,27 +94,28 @@ export default function AlbumPage() {
 
   return (
     <main className="mx-auto max-w-3xl overflow-x-clip px-4 pb-28 pt-[max(1.5rem,env(safe-area-inset-top))]">
-      <header className="mb-5 flex items-start justify-between gap-3">
-        <div>
-          <h1 className="font-display flex items-center gap-2 text-4xl text-amber-900">
+      {/* Si en un celu muy angosto no entran título y botones, los botones bajan en vez de pisar el título */}
+      <header className="mb-5 flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+        <div className="min-w-0">
+          <h1 className="font-display flex items-center gap-2 text-3xl text-amber-900 sm:text-4xl">
             {/* eslint-disable-next-line @next/next/no-img-element -- logo SVG local */}
-            <img src="/icon.svg" alt="" className="-ml-1 h-11 w-11" />
+            <img src="/icon.svg" alt="" className="-ml-1 h-9 w-9 shrink-0 sm:h-11 sm:w-11" />
             Alfabum
           </h1>
           <p className="text-sm text-amber-900/70">Mi álbum de alfajores</p>
         </div>
-        <div className="flex gap-2">
+        <div className="ml-auto flex shrink-0 gap-2">
           {alfajores && alfajores.length > 0 && <ShareButton />}
           <Link
             href="/amigos"
-            className="rounded-full bg-amber-900/10 px-3 py-2 text-sm font-medium text-amber-900"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-900/10 text-amber-900"
             aria-label="Álbumes de amigos"
           >
             👥
           </Link>
           <Link
             href="/cuenta"
-            className="rounded-full bg-amber-900/10 px-3 py-2 text-sm font-medium text-amber-900"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-900/10 text-amber-900"
             aria-label="Tu cuenta"
           >
             👤
@@ -204,8 +205,16 @@ function ShareButton() {
 
   return (
     <div className="relative">
-      <button onClick={share} className="rounded-full bg-amber-900 px-4 py-2 text-sm font-semibold text-amber-50">
-        Compartir
+      <button
+        onClick={share}
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-900 text-amber-50"
+        aria-label="Compartir mi álbum"
+        title="Compartir mi álbum"
+      >
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+          <path d="M12 3v12M8 7l4-4 4 4" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1" strokeLinecap="round" />
+        </svg>
       </button>
       {status && (
         <div className="absolute right-0 top-full z-10 mt-2 w-64 rounded-xl bg-white p-3 pr-8 text-xs text-stone-700 shadow-lg">
