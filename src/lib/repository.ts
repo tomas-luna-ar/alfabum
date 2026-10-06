@@ -1,5 +1,6 @@
 import { toThumbnail } from "./image";
 import { ensureSession, publicUrl, STICKERS_BUCKET, supabase } from "./supabase";
+import type { Breakdown } from "./gamification";
 import type { Alfajor, AlfajorRepository, AlfajorUpdate, CatalogItem, NewAlfajor } from "./types";
 
 type AlfajorRow = {
@@ -120,15 +121,36 @@ export const repository: AlfajorRepository = {
   },
 };
 
-/** Código del link público del álbum del usuario actual; lo crea la primera vez. */
-export async function getShareCode(): Promise<string> {
+export type MyAlbum = { shareCode: string; displayName: string | null };
+
+/** Álbum del usuario actual (código del link público y nombre); lo crea la primera vez. */
+export async function getMyAlbum(): Promise<MyAlbum> {
   await ensureSession();
-  const { data, error } = await supabase.from("albums").select("share_code").maybeSingle();
+  const { data, error } = await supabase.from("albums").select("share_code, display_name").maybeSingle();
   if (error) throw error;
-  if (data) return data.share_code;
-  const { data: created, error: createError } = await supabase.from("albums").insert({}).select("share_code").single();
+  if (data) return { shareCode: data.share_code, displayName: data.display_name };
+  const { data: created, error: createError } = await supabase
+    .from("albums")
+    .insert({})
+    .select("share_code, display_name")
+    .single();
   if (createError) throw createError;
-  return created.share_code;
+  return { shareCode: created.share_code, displayName: created.display_name };
+}
+
+/** Código del link público del álbum del usuario actual. */
+export async function getShareCode(): Promise<string> {
+  return (await getMyAlbum()).shareCode;
+}
+
+/** Nombre que ven los amigos ("Álbum de …"). */
+export async function setDisplayName(name: string): Promise<void> {
+  await getMyAlbum();
+  const { error } = await supabase
+    .from("albums")
+    .update({ display_name: name.trim() || null })
+    .eq("owner_id", (await ensureSession()).user.id);
+  if (error) throw error;
 }
 
 /** Figuritas de un álbum compartido, para cualquiera que tenga el link (no hace falta sesión). */
@@ -143,4 +165,76 @@ export async function getCatalog(): Promise<CatalogItem[]> {
   const { data, error } = await supabase.from("catalog").select("code, brand, name, image_url").order("brand");
   if (error) throw error;
   return data.map((row) => ({ code: row.code, brand: row.brand, name: row.name, imageUrl: row.image_url }));
+}
+
+/** Nombre del dueño de un álbum compartido (null si no puso uno o el link no existe). */
+export async function getSharedAlbumName(code: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc("shared_album_name", { code });
+  if (error) throw error;
+  return data as string | null;
+}
+
+export type FriendAlbum = {
+  shareCode: string;
+  displayName: string | null;
+  breakdown: Breakdown;
+  lastThumbUrl: string | null;
+  lastPhotoStyle: Alfajor["photoStyle"] | null;
+  lastAdded: number | null;
+};
+
+type FriendRow = {
+  share_code: string;
+  display_name: string | null;
+  stickers: number;
+  brands: number;
+  comments: number;
+  own_photos: number;
+  last_thumb_path: string | null;
+  last_photo_style: Alfajor["photoStyle"] | null;
+  last_added: string | null;
+};
+
+/** Álbumes que sigue el usuario actual, con lo necesario para mostrar su nivel y última figurita. */
+export async function getFriends(): Promise<FriendAlbum[]> {
+  await ensureSession();
+  const { data, error } = await supabase.rpc("friend_albums");
+  if (error) throw error;
+  return (data as FriendRow[]).map((row) => ({
+    shareCode: row.share_code,
+    displayName: row.display_name,
+    breakdown: { stickers: row.stickers, brands: row.brands, comments: row.comments, ownPhotos: row.own_photos },
+    lastThumbUrl: row.last_thumb_path ? publicUrl(row.last_thumb_path) : null,
+    lastPhotoStyle: row.last_photo_style,
+    lastAdded: row.last_added ? Date.parse(row.last_added) : null,
+  }));
+}
+
+/**
+ * Relación del usuario con un álbum compartido. No crea sesión: quien solo mira un link no se vuelve usuario
+ * hasta que toca "Agregar a mis amigos".
+ */
+export async function getFollowStatus(code: string): Promise<"own" | "friend" | "none"> {
+  const { data: session } = await supabase.auth.getSession();
+  if (!session.session) return "none";
+  const [own, friend] = await Promise.all([
+    supabase.from("albums").select("share_code").maybeSingle(),
+    supabase.from("friends").select("share_code").eq("share_code", code).maybeSingle(),
+  ]);
+  if (own.error) throw own.error;
+  if (friend.error) throw friend.error;
+  if (own.data?.share_code === code) return "own";
+  return friend.data ? "friend" : "none";
+}
+
+export async function addFriend(code: string): Promise<void> {
+  await ensureSession();
+  const { error } = await supabase.from("friends").upsert({ share_code: code }, { ignoreDuplicates: true });
+  if (error) throw error;
+}
+
+export async function removeFriend(code: string): Promise<void> {
+  await ensureSession();
+  const { error } = await supabase.from("friends").delete().eq("share_code", code);
+  if (error) throw error;
 }

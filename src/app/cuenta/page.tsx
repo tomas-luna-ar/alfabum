@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "@/lib/hooks";
+import { getMyAlbum, setDisplayName } from "@/lib/repository";
 import { supabase } from "@/lib/supabase";
 
 const inputClass =
@@ -60,6 +61,8 @@ export default function CuentaPage() {
         </Link>
         <h1 className="font-display text-2xl text-amber-900">Tu cuenta</h1>
       </header>
+
+      {user && <DisplayNameForm />}
 
       {!user ? (
         <p className="py-10 text-center text-amber-900/60">Cargando…</p>
@@ -130,6 +133,63 @@ export default function CuentaPage() {
         </form>
       )}
     </main>
+  );
+}
+
+/** Nombre que ven los amigos en tu álbum ("Álbum de Tomás"). */
+function DisplayNameForm() {
+  const [name, setName] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    getMyAlbum().then(
+      (album) => setName(album.displayName ?? ""),
+      () => setFailed(true),
+    );
+  }, []);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (name === null) return;
+    setFailed(false);
+    try {
+      await setDisplayName(name);
+      setSaved(true);
+    } catch (err) {
+      console.error(err);
+      setFailed(true);
+    }
+  }
+
+  return (
+    <form onSubmit={save} className="mb-6 rounded-xl bg-white/80 p-4 shadow-sm">
+      <label className="block">
+        <span className="mb-1 block text-sm font-medium text-amber-900">Tu nombre en el álbum</span>
+        <span className="mb-2 block text-xs text-stone-500">Así te ven tus amigos: “Álbum de …”.</span>
+        <div className="flex gap-2">
+          <input
+            className={inputClass}
+            value={name ?? ""}
+            onChange={(e) => {
+              setName(e.target.value);
+              setSaved(false);
+            }}
+            placeholder={name === null ? "Cargando…" : "Ej: Tomás"}
+            disabled={name === null}
+            maxLength={30}
+          />
+          <button
+            type="submit"
+            disabled={name === null}
+            className="shrink-0 rounded-full bg-amber-900 px-4 text-sm font-semibold text-amber-50 disabled:opacity-40"
+          >
+            {saved ? "✓" : "Guardar"}
+          </button>
+        </div>
+      </label>
+      {failed && <p className="mt-2 text-sm text-red-800">No pudimos guardar tu nombre. Probá de nuevo.</p>}
+    </form>
   );
 }
 

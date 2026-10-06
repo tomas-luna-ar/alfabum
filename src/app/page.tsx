@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { AlbumBook } from "@/components/AlbumBook";
 import { FlipSticker } from "@/components/FlipSticker";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { LevelCard } from "@/components/LevelCard";
 import { EmptySlot } from "@/components/Sticker";
 import { useAlfajores, useUser } from "@/lib/hooks";
 import { getShareCode } from "@/lib/repository";
@@ -105,6 +106,13 @@ export default function AlbumPage() {
         <div className="flex gap-2">
           {alfajores && alfajores.length > 0 && <ShareButton />}
           <Link
+            href="/amigos"
+            className="rounded-full bg-amber-900/10 px-3 py-2 text-sm font-medium text-amber-900"
+            aria-label="Álbumes de amigos"
+          >
+            👥
+          </Link>
+          <Link
             href="/cuenta"
             className="rounded-full bg-amber-900/10 px-3 py-2 text-sm font-medium text-amber-900"
             aria-label="Tu cuenta"
@@ -115,6 +123,8 @@ export default function AlbumPage() {
       </header>
 
       <InstallPrompt />
+
+      {alfajores && <LevelCard alfajores={alfajores} celebrate />}
 
       {alfajores && alfajores.length > 0 && (
         <section className="mb-5 grid grid-cols-3 gap-2 text-center">

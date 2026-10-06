@@ -5,8 +5,9 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AlbumBook } from "@/components/AlbumBook";
 import { FlipSticker } from "@/components/FlipSticker";
+import { LevelCard } from "@/components/LevelCard";
 import { EmptySlot } from "@/components/Sticker";
-import { getSharedAlbum } from "@/lib/repository";
+import { addFriend, getFollowStatus, getSharedAlbum, getSharedAlbumName, removeFriend } from "@/lib/repository";
 import type { Alfajor } from "@/lib/types";
 
 const PAGE_SIZE = 6;
@@ -17,6 +18,9 @@ export default function SharedAlbumPage() {
   const [alfajores, setAlfajores] = useState<Alfajor[] | null>(null);
   const [error, setError] = useState(false);
   const [page, setPage] = useState(0);
+  const [name, setName] = useState<string | null>(null);
+  const [follow, setFollow] = useState<"own" | "friend" | "none" | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -27,10 +31,35 @@ export default function SharedAlbumPage() {
         if (!cancelled) setError(true);
       },
     );
+    getSharedAlbumName(code).then(
+      (n) => !cancelled && setName(n),
+      () => {},
+    );
+    getFollowStatus(code).then(
+      (status) => !cancelled && setFollow(status),
+      (err) => console.error("No se pudo ver si ya lo seguís", err),
+    );
     return () => {
       cancelled = true;
     };
   }, [code]);
+
+  async function toggleFollow() {
+    setBusy(true);
+    try {
+      if (follow === "friend") {
+        await removeFriend(code);
+        setFollow("none");
+      } else {
+        await addFriend(code);
+        setFollow("friend");
+      }
+    } catch (err) {
+      console.error("No se pudo actualizar tus amigos", err);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const pageCount = Math.max(1, Math.ceil((alfajores?.length ?? 0) / PAGE_SIZE));
   const average = alfajores?.length ? alfajores.reduce((sum, a) => sum + a.rating, 0) / alfajores.length : 0;
@@ -59,7 +88,32 @@ export default function SharedAlbumPage() {
           <img src="/icon.svg" alt="" className="-ml-1 h-11 w-11" />
           Alfabum
         </h1>
-        <p className="text-sm text-amber-900/70">Un álbum de alfajores compartido con vos</p>
+        <p className="text-sm text-amber-900/70">
+          {name ? (
+            <>
+              Álbum de <strong>{name}</strong>
+            </>
+          ) : (
+            "Un álbum de alfajores compartido con vos"
+          )}
+        </p>
+        {follow === "own" ? (
+          <p className="mt-3 text-sm text-amber-900/70">Este es tu álbum, así lo ven tus amigos.</p>
+        ) : (
+          follow !== null &&
+          alfajores !== null &&
+          !error && (
+            <button
+              onClick={toggleFollow}
+              disabled={busy}
+              className={`mt-3 rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-50 ${
+                follow === "friend" ? "bg-amber-900/10 text-amber-900" : "bg-amber-900 text-amber-50"
+              }`}
+            >
+              {follow === "friend" ? "✓ En tus amigos · Dejar de seguir" : "＋ Agregar a mis amigos"}
+            </button>
+          )
+        )}
       </header>
 
       {error ? (
@@ -70,6 +124,7 @@ export default function SharedAlbumPage() {
         <p className="py-20 text-center text-amber-900/60">Este álbum todavía no tiene figuritas (o el link no existe).</p>
       ) : (
         <>
+          <LevelCard alfajores={alfajores} />
           <p className="mb-4 text-sm text-amber-900/80">
             {alfajores.length} {alfajores.length === 1 ? "figurita" : "figuritas"} · promedio {average.toFixed(1)}★
           </p>
