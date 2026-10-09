@@ -10,7 +10,9 @@ import { Sticker } from "@/components/Sticker";
 import { useAlfajores } from "@/lib/hooks";
 import { rotateClockwise, type Quad } from "@/lib/geometry";
 import { preloadModel, processPhoto, scanWithCorners, type ProcessedPhoto, type ProcessStage } from "@/lib/image";
+import { notifyNewSticker } from "@/app/actions/notify";
 import { repository } from "@/lib/repository";
+import { supabase } from "@/lib/supabase";
 import type { CatalogItem, PhotoStyle } from "@/lib/types";
 
 /** Crédito obligatorio de las fotos del catálogo (licencia CC BY-SA). */
@@ -112,7 +114,7 @@ export default function NuevoPage() {
     if (!canSave) return;
     setSaving(true);
     try {
-      await repository.create({
+      const created = await repository.create({
         name: values.name.trim(),
         brand: values.brand.trim(),
         rating: values.rating,
@@ -121,6 +123,11 @@ export default function NuevoPage() {
         photoStyle,
         photoCredit,
       });
+      // Aviso push a quienes siguen el álbum; no se espera para no demorar el guardado
+      supabase.auth
+        .getSession()
+        .then(({ data }) => data.session && notifyNewSticker(data.session.access_token, created.id))
+        .catch((err) => console.error("No se pudo avisar a los amigos", err));
       router.push("/");
     } catch (err) {
       console.error("No se pudo guardar la figurita", err);

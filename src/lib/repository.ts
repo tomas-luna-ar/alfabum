@@ -238,3 +238,72 @@ export async function removeFriend(code: string): Promise<void> {
   const { error } = await supabase.from("friends").delete().eq("share_code", code);
   if (error) throw error;
 }
+
+export const REACTION_EMOJIS = ["😋", "🤤", "🔥", "😂", "🤢"] as const;
+export type ReactionEmoji = (typeof REACTION_EMOJIS)[number];
+
+/** Reacciones de una figurita: cuántas de cada emoji y cuál puso el usuario actual. */
+export type StickerReactions = { counts: Partial<Record<ReactionEmoji, number>>; mine: ReactionEmoji | null };
+
+/** Reacciones de todas las figuritas de un álbum, por id de figurita. */
+export async function getAlbumReactions(code: string): Promise<Map<string, StickerReactions>> {
+  const { data, error } = await supabase.rpc("album_reactions", { code });
+  if (error) throw error;
+  const byAlfajor = new Map<string, StickerReactions>();
+  for (const row of data as { alfajor_id: string; emoji: ReactionEmoji; total: number; mine: boolean }[]) {
+    const entry = byAlfajor.get(row.alfajor_id) ?? { counts: {}, mine: null };
+    entry.counts[row.emoji] = row.total;
+    if (row.mine) entry.mine = row.emoji;
+    byAlfajor.set(row.alfajor_id, entry);
+  }
+  return byAlfajor;
+}
+
+/** Pone, cambia o saca (null) la reacción del usuario actual a una figurita. */
+export async function setReaction(alfajorId: string, emoji: ReactionEmoji | null): Promise<void> {
+  const session = await ensureSession();
+  const { error } = emoji
+    ? await supabase.from("reactions").upsert({ alfajor_id: alfajorId, user_id: session.user.id, emoji })
+    : await supabase.from("reactions").delete().eq("alfajor_id", alfajorId).eq("user_id", session.user.id);
+  if (error) throw error;
+}
+
+export type FeedItem = {
+  kind: "sticker" | "reaction";
+  /** Álbum al que lleva la novedad (el del amigo que pegó o reaccionó), si tiene uno. */
+  shareCode: string | null;
+  who: string | null;
+  emoji: string | null;
+  alfajorName: string;
+  alfajorBrand: string;
+  thumbUrl: string;
+  createdAt: number;
+};
+
+/** Novedades para la campanita: figuritas nuevas de amigos y reacciones a mis figuritas. */
+export async function getFeed(): Promise<FeedItem[]> {
+  await ensureSession();
+  const { data, error } = await supabase.rpc("my_feed", { lim: 30 });
+  if (error) throw error;
+  return (
+    data as {
+      kind: FeedItem["kind"];
+      share_code: string | null;
+      who: string | null;
+      emoji: string | null;
+      alfajor_name: string;
+      alfajor_brand: string;
+      thumb_path: string;
+      created_at: string;
+    }[]
+  ).map((row) => ({
+    kind: row.kind,
+    shareCode: row.share_code,
+    who: row.who,
+    emoji: row.emoji,
+    alfajorName: row.alfajor_name,
+    alfajorBrand: row.alfajor_brand,
+    thumbUrl: publicUrl(row.thumb_path),
+    createdAt: Date.parse(row.created_at),
+  }));
+}

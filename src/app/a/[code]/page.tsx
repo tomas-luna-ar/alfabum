@@ -7,7 +7,17 @@ import { AlbumBook } from "@/components/AlbumBook";
 import { FlipSticker } from "@/components/FlipSticker";
 import { LevelCard } from "@/components/LevelCard";
 import { EmptySlot } from "@/components/Sticker";
-import { addFriend, getFollowStatus, getSharedAlbum, getSharedAlbumName, removeFriend } from "@/lib/repository";
+import {
+  addFriend,
+  getAlbumReactions,
+  getFollowStatus,
+  getSharedAlbum,
+  getSharedAlbumName,
+  removeFriend,
+  setReaction,
+  type ReactionEmoji,
+  type StickerReactions,
+} from "@/lib/repository";
 import type { Alfajor } from "@/lib/types";
 
 const PAGE_SIZE = 6;
@@ -21,6 +31,7 @@ export default function SharedAlbumPage() {
   const [name, setName] = useState<string | null>(null);
   const [follow, setFollow] = useState<"own" | "friend" | "none" | null>(null);
   const [busy, setBusy] = useState(false);
+  const [reactions, setReactions] = useState<Map<string, StickerReactions>>(new Map());
 
   useEffect(() => {
     let cancelled = false;
@@ -35,6 +46,10 @@ export default function SharedAlbumPage() {
       (n) => !cancelled && setName(n),
       () => {},
     );
+    getAlbumReactions(code).then(
+      (r) => !cancelled && setReactions(r),
+      (err) => console.error("No se pudieron cargar las reacciones", err),
+    );
     getFollowStatus(code).then(
       (status) => !cancelled && setFollow(status),
       (err) => console.error("No se pudo ver si ya lo seguís", err),
@@ -43,6 +58,21 @@ export default function SharedAlbumPage() {
       cancelled = true;
     };
   }, [code]);
+
+  /** Reacciona al instante en pantalla y después lo guarda; si falla, vuelve atrás. */
+  async function react(alfajorId: string, emoji: ReactionEmoji | null) {
+    const before = reactions.get(alfajorId) ?? { counts: {}, mine: null };
+    const counts = { ...before.counts };
+    if (before.mine) counts[before.mine] = (counts[before.mine] ?? 1) - 1;
+    if (emoji) counts[emoji] = (counts[emoji] ?? 0) + 1;
+    setReactions((m) => new Map(m).set(alfajorId, { counts, mine: emoji }));
+    try {
+      await setReaction(alfajorId, emoji);
+    } catch (err) {
+      console.error("No se pudo guardar la reacción", err);
+      setReactions((m) => new Map(m).set(alfajorId, before));
+    }
+  }
 
   async function toggleFollow() {
     setBusy(true);
@@ -72,7 +102,16 @@ export default function SharedAlbumPage() {
           // Los lugares sin figurita solo ocupan espacio, para que todas las hojas midan lo mismo
           return (
             <li key={alfajor?.id ?? `empty-${i}`} className={alfajor ? "" : "invisible"} aria-hidden={!alfajor}>
-              {alfajor ? <FlipSticker alfajor={alfajor} /> : <EmptySlot number={0} />}
+              {alfajor ? (
+                <FlipSticker
+                  alfajor={alfajor}
+                  reactions={reactions.get(alfajor.id)}
+                  // En tu propio link solo se ven los conteos
+                  onReact={follow === "own" ? undefined : (emoji) => react(alfajor.id, emoji)}
+                />
+              ) : (
+                <EmptySlot number={0} />
+              )}
             </li>
           );
         })}

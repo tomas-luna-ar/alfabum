@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlbumBook } from "@/components/AlbumBook";
 import { FlipSticker } from "@/components/FlipSticker";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { LevelCard } from "@/components/LevelCard";
 import { EmptySlot } from "@/components/Sticker";
 import { useAlfajores, useUser } from "@/lib/hooks";
-import { getShareCode } from "@/lib/repository";
+import { readFeedSeenAt } from "@/lib/feed";
+import { getAlbumReactions, getFeed, getMyAlbum, getShareCode, type StickerReactions } from "@/lib/repository";
 import type { Alfajor } from "@/lib/types";
 
 type SortKey = "number" | "rating" | "recent";
@@ -42,6 +43,29 @@ function sortAlfajores(list: Alfajor[], key: SortKey) {
 
 export default function AlbumPage() {
   const { alfajores, error } = useAlfajores();
+  const [reactions, setReactions] = useState<Map<string, StickerReactions>>(new Map());
+  const [unread, setUnread] = useState(0);
+
+  // Reacciones que recibieron mis figuritas y novedades sin leer de amigos (el globito de 👥)
+  useEffect(() => {
+    let cancelled = false;
+    getMyAlbum()
+      .then((album) => getAlbumReactions(album.shareCode))
+      .then(
+        (r) => !cancelled && setReactions(r),
+        (err) => console.error("No se pudieron cargar las reacciones", err),
+      );
+    getFeed().then(
+      (feed) => {
+        const seenAt = readFeedSeenAt();
+        if (!cancelled) setUnread(feed.filter((item) => item.createdAt > seenAt).length);
+      },
+      (err) => console.error("No se pudieron cargar las novedades", err),
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [sort, setSort] = useState<SortKey>("number");
   // Solo se lee en el cliente; el álbum no se pinta hasta cargar las figuritas, así que no afecta la hidratación
   const [page, setPage] = useState(readStoredPage);
@@ -76,7 +100,7 @@ export default function AlbumPage() {
           if (alfajor) {
             return (
               <li key={alfajor.id} className="sticker-pop">
-                <AlbumSticker alfajor={alfajor} />
+                <AlbumSticker alfajor={alfajor} reactions={reactions.get(alfajor.id)} />
               </li>
             );
           }
@@ -108,10 +132,15 @@ export default function AlbumPage() {
           {alfajores && alfajores.length > 0 && <ShareButton />}
           <Link
             href="/amigos"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-900/10 text-amber-900"
-            aria-label="Álbumes de amigos"
+            className="relative flex h-10 w-10 items-center justify-center rounded-full bg-amber-900/10 text-amber-900"
+            aria-label={unread ? `Amigos: ${unread} novedades` : "Álbumes de amigos"}
           >
             👥
+            {unread > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[0.65rem] font-bold text-white">
+                {unread > 9 ? "9+" : unread}
+              </span>
+            )}
           </Link>
           <Link
             href="/cuenta"
@@ -252,6 +281,6 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function AlbumSticker({ alfajor }: { alfajor: Alfajor }) {
-  return <FlipSticker alfajor={alfajor} href={`/alfajor/${alfajor.id}`} />;
+function AlbumSticker({ alfajor, reactions }: { alfajor: Alfajor; reactions?: StickerReactions }) {
+  return <FlipSticker alfajor={alfajor} href={`/alfajor/${alfajor.id}`} reactions={reactions} />;
 }
